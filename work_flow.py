@@ -1,4 +1,4 @@
-# -*- encoding: UTF-8 -*-
+# -- encoding: UTF-8 --**
 
 import data_fetcher
 import settings
@@ -15,6 +15,7 @@ import push
 import logging
 import time
 import datetime
+import gc
 
 
 def prepare():
@@ -24,9 +25,11 @@ def prepare():
     stocks = [tuple(x) for x in subset.values]
     statistics(all_data, stocks)
 
+    all_data = None
+    gc.collect()
     strategies = {
         '放量上涨': enter.check_volume,
-        '均线多头': keep_increasing.check,
+        # '均线多头': keep_increasing.check,
         '停机坪': parking_apron.check,
         '回踩年线': backtrace_ma250.check,
         # '突破平台': breakthrough_platform.check,
@@ -45,17 +48,33 @@ def prepare():
     logging.info("************************ process   end ***************************************")
 
 def process(stocks, strategies):
-    stocks_data = data_fetcher.run(stocks)
+    end = settings.config['end_date']
+    # stocks_data = data_fetcher.run(stocks)
+    batch_size = 1300
     for strategy, strategy_func in strategies.items():
-        check(stocks_data, strategy, strategy_func)
+        # 分批请求 服务器内存不够。。。
+        g_res = dict()
+        for i in range(0, len(stocks), batch_size):
+            stocks_data = data_fetcher.run(stocks[i:i + batch_size])
+            # check(stocks_data, strategy, strategy_func)
+            m_filter = check_enter(end_date=end, strategy_fun=strategy_func)
+            results = dict(filter(m_filter, stocks_data.items()))
+            if len(results) > 0:
+                for key, value in results.items():
+                    g_res[key] = value
+            time.sleep(0.5)
+
+        push.strategy('**************"{0}"**************\n{1}\n**************"{0}"**************\n'.format(strategy, list(g_res.keys())))
+        g_res = None
+        gc.collect()
         time.sleep(2)
 
-def check(stocks_data, strategy, strategy_func):
-    end = settings.config['end_date']
-    m_filter = check_enter(end_date=end, strategy_fun=strategy_func)
-    results = dict(filter(m_filter, stocks_data.items()))
-    if len(results) > 0:
-        push.strategy('**************"{0}"**************\n{1}\n**************"{0}"**************\n'.format(strategy, list(results.keys())))
+# def check(stocks_data, strategy, strategy_func):
+#     end = settings.config['end_date']
+#     m_filter = check_enter(end_date=end, strategy_fun=strategy_func)
+#     results = dict(filter(m_filter, stocks_data.items()))
+#     if len(results) > 0:
+#         push.strategy('**************"{0}"**************\n{1}\n**************"{0}"**************\n'.format(strategy, list(results.keys())))
 
 
 def check_enter(end_date=None, strategy_fun=enter.check_volume):

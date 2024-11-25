@@ -1,4 +1,4 @@
-# -*- encoding: UTF-8 -*-
+# -- encoding: UTF-8 --**
 import pandas as pd
 import talib as tl
 import logging

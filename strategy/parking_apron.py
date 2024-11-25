@@ -1,4 +1,4 @@
-# -*- encoding: UTF-8 -*-
+# -- encoding: UTF-8 --**
 
 import logging
 from strategy import turtle_trade

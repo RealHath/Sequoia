@@ -1,4 +1,4 @@
-# -*- encoding: UTF-8 -*-
+# -- encoding: UTF-8 --**
 import strategy.high_tight_flag
 import utils
 import strategy.enter as enter
